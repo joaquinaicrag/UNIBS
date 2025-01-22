@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from analmodels import *
 
-def myfun_jca(f, phi, alpha_inf, sigma, lamb, lamb_prima, d): 
+def jca_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d): 
     """
     Absorption equation based on the JCA model.
     """
@@ -27,32 +27,32 @@ def myfun_jca(f, phi, alpha_inf, sigma, lamb, lamb_prima, d):
     #d = 40e-3  # [m] Sample thickness                        
     
     # Calculate the complex wave number K (Bonfiglio et al.)
-    k = (gamma * p0 / phi) / (
+    b_jca = (gamma * p0 / phi) / (
         gamma - (gamma - 1) * (1 + 
         (8 * nu / (1j * rho0 * w * Np * lamb_prima**2)) * 
         np.sqrt(1 + (1j * rho0 * w * Np * lamb_prima**2 / (16 * nu))))**(-1)
     )
     
     # Calculate the complex density rho (Bonfiglio et al.)
-    rho = (alpha_inf * rho0 / phi) + (sigma / (1j * w)) * np.sqrt(1 + 
+    d_jca = (alpha_inf * rho0 / phi) + (sigma / (1j * w)) * np.sqrt(1 + 
         (4j * (alpha_inf**2) * nu * rho0 * w / ((sigma**2) * (lamb**2) * (phi**2))))
     
     # Wavenumber in the porous material
-    kc = w * np.sqrt(rho / k)  
+    kc = w * np.sqrt(d_jca / b_jca)  
     # Characteristic impedance of the porous material
-    Zc = np.sqrt(rho * k)  
+    Zc = np.sqrt(d_jca * b_jca)  
     # Surface acoustic impedance of the porous layer
     z = -1j * Zc * 1/np.tan(kc * d)
     # Normalized surface impedance
     ep = z / z0  
     # Calculate the final absorption response
-    f = 4 * np.real(ep) / (np.abs(ep)**2 + 2 * np.real(ep) + 1)
+    abs_jca = 4 * np.real(ep) / (np.abs(ep)**2 + 2 * np.real(ep) + 1)
     
-    return f
+    return abs_jca, d_jca, b_jca
 
 
 
-def myfun_jcal(f, phi, alpha_inf, sigma, lamb, lamb_prima, d):
+def jcal_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d):
     """
     Absorption equation based on the JCAL model.
     """
@@ -84,11 +84,11 @@ def myfun_jcal(f, phi, alpha_inf, sigma, lamb, lamb_prima, d):
     # Surface acoustic impedance of the porous layer for JCAL model
     z_JCAL = -1j * Zc_JCAL * (1/np.tan(k_JCAL * d))
     # Calculate the final absorption response for JCAL
-    f_JCAL = 1 - np.abs((z_JCAL - z0) / (z_JCAL + z0))**2
+    abs_JCAL = 1 - np.abs((z_JCAL - z0) / (z_JCAL + z0))**2
 
-    return f_JCAL
+    return abs_JCAL, d_JCA, b_JCAL
 
-def myfun_hs(f, phi, alpha_inf, sigma, r_por, d):
+def horosh_model(f, phi, alpha_inf, sigma, r_por, d):
     """
     Absorption equation based on the Horoshenkov & Swift (HS) model.
     """
@@ -119,7 +119,8 @@ def myfun_hs(f, phi, alpha_inf, sigma, r_por, d):
     f = (1 + a1 * ep + a2 * ep**2) / (1 + b1 * ep) 
     # Compressibility (inverse of bulk modulus) for HS
     c_HS = (phi / (gamma * p0)) * (gamma - (rho0 * (gamma - 1) /
-               (rho0 - 1j * sigma * phi / (omega * alpha_inf * Np) * f)))           
+               (rho0 - 1j * sigma * phi / (omega * alpha_inf * Np) * f)))
+    b_HS = 1/c_HS           
     # Density for HS model
     d_HS = (alpha_inf / phi) * (rho0 - ((1j * phi * sigma) / (omega * alpha_inf) * f))  
     # Surface impedance for HS model
@@ -131,7 +132,7 @@ def myfun_hs(f, phi, alpha_inf, sigma, r_por, d):
     # Calculate the final absorption response for HS
     abs_HS = 1 - np.abs((z_HS - z0) / (z_HS + z0))**2
     
-    return abs_HS
+    return abs_HS, d_HS, b_HS
 
 # def nlcon(x):
 #     """
@@ -149,43 +150,43 @@ def myfun_hs(f, phi, alpha_inf, sigma, r_por, d):
 #     c2 = []  # Inequality constraints (if any)
 #     return c2, ceq2
 
-#%% NON LINEAR LEAST SQUARE METHOD
 
 
 
+# NON LINEAR LEAST SQUARE METHOD
 
 def NonlinLS_inv(xdata, ydata, startpt, lb, ub, model, d):
     if model == 'JCA':
         def wrapper(f, *params):
-            return myfun_jca(f, *params, d)
+            return jca_model(f, *params, d)
         #print(lb)
         lb_jca = lb[:-1]  # Lower bound of parameters
         ub_jca = ub[:-1]  # Upper bound of parameters
         startpt_jca = startpt[:-1]
         coef_JCA, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_jca, bounds=(lb_jca, ub_jca))
-        fitted_data = myfun_jca(xdata, *coef_JCA, d)
+        fitted_data = jca_model(xdata, *coef_JCA, d)
         return fitted_data, coef_JCA, cov
     
     elif model == 'HS':
         def wrapper(f, *params):
-            return myfun_hs(f, *params, d)
+            return horosh_model(f, *params, d)
         
         lb_hs = lb[:-3] + lb[-1:]  # Lower bound of parameters
         ub_hs = ub[:-3] + ub[-1:]  # Upper bound of parameters
         startpt_hs = startpt[:-3] + startpt[-1:]
         coef_HS, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_hs, bounds=(lb_hs, ub_hs))
-        fitted_data = myfun_hs(xdata, *coef_HS, d)
+        fitted_data = horosh_model(xdata, *coef_HS, d)
         return fitted_data, coef_HS, cov
     
     elif model == 'JCAL':
         def wrapper(f, *params):
-            return myfun_jcal(f, *params, d)
+            return jcal_model(f, *params, d)
         
         lb_hs = lb[:-3] + lb[-1:]  # Lower bound of parameters
         ub_hs = ub[:-3] + ub[-1:]  # Upper bound of parameters
         startpt_hs = startpt[:-3] + startpt[-1:]
         coef_HS, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_hs, bounds=(lb_hs, ub_hs))
-        fitted_data = myfun_jcal(xdata, *coef_HS, d)
+        fitted_data = jcal_model(xdata, *coef_HS, d)
         return fitted_data, coef_HS, cov
 
 
