@@ -52,7 +52,7 @@ def jca_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d):
     # Calculate the final absorption response
     abs_jca = 4 * np.real(ep) / (np.abs(ep)**2 + 2 * np.real(ep) + 1)
     
-    return abs_jca
+    return abs_jca, d_jca, b_jca
 
 
 
@@ -90,7 +90,7 @@ def jcal_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d):
     # Calculate the final absorption response for JCAL
     abs_JCAL = 1 - np.abs((z_JCAL - z0) / (z_JCAL + z0))**2
 
-    return d_JCAL, b_JCAL
+    return abs_JCAL, d_JCAL, b_JCAL
 
 def horosh_model(f, phi, alpha_inf, sigma, r_por, d):
     """
@@ -136,8 +136,70 @@ def horosh_model(f, phi, alpha_inf, sigma, r_por, d):
     # Calculate the final absorption response for HS
     abs_HS = 1 - np.abs((z_HS - z0) / (z_HS + z0))**2
     
-    return d_HS, b_HS
+    return abs_HS, d_HS, b_HS
 
+#Attenborough & Swift model:
+def attenborough_swift_model(f, phi, alpha_inf, sigma, lamb, d):
+    """
+    Absorption equation based on the Attenborough & Swift model.
+    """
+    omega = 2 * np.pi * f  # Angular frequency
+    rho0 = 1.204  # [kg/m^3] Density of air
+    c0 = 343  # Velocity of sound in air [m/s]
+    z0 = rho0 * c0  # Characteristic impedance of air
+
+    # Effective density (CHECK THIS)
+    d_AS = (alpha_inf * rho0 / phi) + (sigma / (1j * omega)) * np.sqrt(1 + 
+        (4j * alpha_inf**2 * rho0 * omega / (sigma**2 * lamb**2 * phi**2)))
+
+    # Effective bulk modulus
+    b_AS = (1 / phi) * (1 / (1 - 1j * (sigma / (omega * rho0 * lamb))))
+
+    # Characteristic impedance
+    Zc_AS = np.sqrt(d_AS * b_AS)
+
+    # Wavenumber
+    k_AS = omega * np.sqrt(d_AS / b_AS)
+
+    # Surface acoustic impedance
+    z_AS = -1j * Zc_AS * (1 / np.tan(k_AS * d))
+
+    # Absorption coefficient
+    abs_AS = 1 - np.abs((z_AS - z0) / (z_AS + z0))**2
+
+    return abs_AS, d_AS, b_AS
+
+#Wilson & Stinson model:
+#Absorption equation based on the Wilson & Stinson model.
+def wilson_stinson_model(f, phi, alpha_inf, sigma, lamb, d):
+    """
+    Absorption equation based on the Wilson & Stinson model.
+    """
+    omega = 2 * np.pi * f  # Angular frequency
+    rho0 = 1.204  # [kg/m^3] Density of air
+    c0 = 343  # Velocity of sound in air [m/s]
+    z0 = rho0 * c0  # Characteristic impedance of air
+
+    # Effective density
+    d_WS = (alpha_inf * rho0 / phi) + (sigma / (1j * omega)) * np.sqrt(1 + 
+        (4j * alpha_inf**2 * rho0 * omega / (sigma**2 * lamb**2 * phi**2)))
+
+    # Effective bulk modulus
+    b_WS = (1 / phi) * (1 / (1 - 1j * (sigma / (omega * rho0 * lamb))))
+
+    # Characteristic impedance
+    Zc_WS = np.sqrt(d_WS * b_WS)
+
+    # Wavenumber
+    k_WS = omega * np.sqrt(d_WS / b_WS)
+
+    # Surface acoustic impedance
+    z_WS = -1j * Zc_WS * (1 / np.tan(k_WS * d))
+
+    # Absorption coefficient
+    abs_WS = 1 - np.abs((z_WS - z0) / (z_WS + z0))**2
+
+    return abs_WS, d_WS, b_WS
 
 
 
