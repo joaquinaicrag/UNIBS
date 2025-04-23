@@ -9,7 +9,7 @@ from analmodels import *
 
 # DIFFERENT ANALYTICAL MODELS
 
-def jca_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d): 
+def jca_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000): 
     """
     Absorption equation based on the JCA model.
     """
@@ -22,13 +22,14 @@ def jca_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d):
     # lamb_prima = x[4]  # Another pore size parameter
     
     Np = 0.71  # Prandtl number for air
-    p0 = 101325  # Standard air pressure [Pa]
+    #p0 = 101325  # Standard air pressure [Pa]
     gamma = 1.4  # Heat capacity ratio of air
     nu = 1.95e-5  # [Pa.s] Dynamic viscosity of air
-    rho0 = 1.204  # [kg/m^3] Density of air
-    c0 = 343  # Velocity of sound in air [m/s]
-    z0 = rho0 * c0  # Characteristic impedance of air
-    #d = 40e-3  # [m] Sample thickness                        
+
+    tK = temp + 273.15
+    c0 = 20.047 * np.sqrt( tK )     # m/s
+    rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
+    z0 = rho0 * c0  # Characteristic impedance of air                 
     
     # Calculate the complex wave number K (Bonfiglio et al.)
     b_jca = (gamma * p0 / phi) / (
@@ -56,26 +57,21 @@ def jca_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d):
 
 
 
-def jcal_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d):
+def jcal_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000):
     """
     Absorption equation based on the JCAL model.
     """
     omega = 2 * np.pi * f  # Angular frequency
-    #phi, alpha_inf, sigma, lamb, lamb_prima = params
-    # phi = x[0]  # Porosity
-    # alpha_inf = x[1]  # Infinite frequency absorption coefficient
-    # sigma = x[2]  # Flow resistance
-    # lamb = x[3]  # Pore size parameter
-    # lamb_prima = x[4]  # Another pore size parameter
-    
+   
     Np = 0.71  # Prandtl number for air
-    p0 = 101325  # Standard air pressure [Pa]
+    #p0 = 101325  # Standard air pressure [Pa]
     gamma = 1.4  # Heat capacity ratio of air
     nu = 1.95e-5  # [Pa.s] Dynamic viscosity of air
-    rho0 = 1.204  # [kg/m^3] Density of air
-    c0 = 343  # Velocity of sound in air [m/s]
-    z0 = rho0 * c0  # Characteristic impedance of air
-    # d = 50e-3  # [m] Sample thickness 
+    
+    tK = temp + 273.15
+    c0 = 20.047 * np.sqrt( tK )     # m/s
+    rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
+    z0 = rho0 * c0  # Characteristic impedance of air         
     
     # Calculate density for the JCA model
     d_JCAL = dens_JCA(phi, alpha_inf, sigma, lamb, nu, rho0, omega) 
@@ -92,24 +88,20 @@ def jcal_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d):
 
     return abs_JCAL, d_JCAL, b_JCAL
 
-def horosh_model(f, phi, alpha_inf, sigma, r_por, d):
+def horosh_model(f, phi, alpha_inf, sigma, r_por, d, temp=20, p0=99000):
     """
     Absorption equation based on the Horoshenkov & Swift (HS) model.
     """
     omega = 2 * np.pi * f  # Angular frequency
-    #phi, alpha_inf, sigma, r_por = params
-    # phi = x[0]  # Porosity
-    # alpha_inf = x[1]  # Infinite frequency absorption coefficient
-    # sigma = x[2]  # Flow resistance
-    # r_por = x[3]  # Pore radius
     
     Np = 0.71  # Prandtl number for air
-    p0 = 101325  # Standard air pressure [Pa]
+    #p0 = 101325  # Standard air pressure [Pa]
     gamma = 1.4  # Heat capacity ratio of air 
-    rho0 = 1.204  # [kg/m^3] Density of air
-    c0 = 343  # Velocity of sound in air [m/s]
-    z0 = rho0 * c0  # Characteristic impedance of air
-    #d = 40e-3  # [m] Sample thickness 
+
+    tK = temp + 273.15
+    c0 = 20.047 * np.sqrt( tK )     # m/s
+    rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
+    z0 = rho0 * c0  # Characteristic impedance of air       
 
     xi = (r_por * np.log(2)) ** 2  # Parameter for absorption calculations
     ep = np.sqrt(1j * omega * rho0 * alpha_inf / (sigma * phi))  # Normalize absorption
@@ -139,14 +131,16 @@ def horosh_model(f, phi, alpha_inf, sigma, r_por, d):
     return abs_HS, d_HS, b_HS
 
 #Attenborough & Swift model:
-def attenborough_swift_model(f, phi, alpha_inf, sigma, lamb, d):
+def attenborough_swift_model(f, phi, alpha_inf, sigma, lamb, d, temp=20, p0=99000):
     """
     Absorption equation based on the Attenborough & Swift model.
     """
     omega = 2 * np.pi * f  # Angular frequency
-    rho0 = 1.204  # [kg/m^3] Density of air
-    c0 = 343  # Velocity of sound in air [m/s]
-    z0 = rho0 * c0  # Characteristic impedance of air
+
+    tK = temp + 273.15
+    c0 = 20.047 * np.sqrt( tK )     # m/s
+    rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
+    z0 = rho0 * c0  # Characteristic impedance of air       
 
     # Effective density (CHECK THIS)
     d_AS = (alpha_inf * rho0 / phi) + (sigma / (1j * omega)) * np.sqrt(1 + 
@@ -171,21 +165,32 @@ def attenborough_swift_model(f, phi, alpha_inf, sigma, lamb, d):
 
 #Wilson & Stinson model:
 #Absorption equation based on the Wilson & Stinson model.
-def wilson_stinson_model(f, phi, alpha_inf, sigma, lamb, d):
+def wilson_stinson_model(f, phi, alpha_inf, d, temp=20, p0=99000):
     """
     Absorption equation based on the Wilson & Stinson model.
     """
     omega = 2 * np.pi * f  # Angular frequency
-    rho0 = 1.204  # [kg/m^3] Density of air
-    c0 = 343  # Velocity of sound in air [m/s]
-    z0 = rho0 * c0  # Characteristic impedance of air
 
+    tK = temp + 273.15
+    c0 = 20.047 * np.sqrt( tK )     # m/s
+    rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
+    z0 = rho0 * c0  # Characteristic impedance of air       
+    gamma = 1.4  # Adiabatic constant
+    l = 2e-3 # some dimension characteristic of the pore (Wilson) --> grain size (eg. 2 mm) [m]
+    nu = 1.95e-5  # [Pa.s] Dynamic viscosity of air
+    Np = 0.71 #Prandtl number
+    
+    
+    rho_inf = (rho0 * alpha_inf**2) / phi
+    k_inf =  (p0 * gamma)/phi
+    tau_vor = (rho0 * l**2) / (2*nu) # Relaxation time
+    tau_ent =  tau_vor * Np # Relaxation time
+    
     # Effective density
-    d_WS = (alpha_inf * rho0 / phi) + (sigma / (1j * omega)) * np.sqrt(1 + 
-        (4j * alpha_inf**2 * rho0 * omega / (sigma**2 * lamb**2 * phi**2)))
+    d_WS = rho_inf * (np.sqrt(1 - 1j*omega*tau_vor) / (np.sqrt(1 - 1j*omega*tau_vor) - 1))
 
     # Effective bulk modulus
-    b_WS = (1 / phi) * (1 / (1 - 1j * (sigma / (omega * rho0 * lamb))))
+    b_WS = k_inf * (np.sqrt(1 - 1j*omega*tau_ent) / (np.sqrt(1 - 1j*omega*tau_ent) + gamma - 1))
 
     # Characteristic impedance
     Zc_WS = np.sqrt(d_WS * b_WS)
@@ -208,27 +213,21 @@ def wilson_stinson_model(f, phi, alpha_inf, sigma, lamb, d):
 
 # ANALYTICAL MODELS ADAPTED FOR THE INVERSE METHOD IMPLEMENTATION
 
-def test_jca_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d): 
+def test_jca_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000): 
     """
     Absorption equation based on the JCA model.
     """
     w = 2 * np.pi * f  # Angular frequency
-    #phi, alpha_inf, sigma, lamb, lamb_prima = params
-    # phi = x[0]  # Porosity
-    # alpha_inf = x[1]  # Infinite frequency absorption coefficient
-    # sigma = x[2]  # Flow resistance
-    # lamb = x[3]  # Pore size parameter
-    # lamb_prima = x[4]  # Another pore size parameter
     
     Np = 0.71  # Prandtl number for air
-    p0 = 101325  # Standard air pressure [Pa]
+    #p0 = 101325  # Standard air pressure [Pa]
     gamma = 1.4  # Heat capacity ratio of air
     nu = 1.95e-5  # [Pa.s] Dynamic viscosity of air
-    rho0 = 1.204  # [kg/m^3] Density of air
-    c0 = 343  # Velocity of sound in air [m/s]
-    z0 = rho0 * c0  # Characteristic impedance of air
-    #d = 40e-3  # [m] Sample thickness                        
-    
+    tK = temp + 273.15
+    c0 = 20.047 * np.sqrt( tK )     # m/s
+    rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
+    z0 = rho0 * c0  # Characteristic impedance of air       
+
     # Calculate the complex wave number K (Bonfiglio et al.)
     b_jca = (gamma * p0 / phi) / (
         gamma - (gamma - 1) * (1 + 
@@ -255,7 +254,7 @@ def test_jca_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d):
 
 
 
-def test_jcal_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d):
+def test_jcal_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000):
     """
     Absorption equation based on the JCAL model.
     """
@@ -268,14 +267,14 @@ def test_jcal_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d):
     # lamb_prima = x[4]  # Another pore size parameter
     
     Np = 0.71  # Prandtl number for air
-    p0 = 101325  # Standard air pressure [Pa]
+    #p0 = 101325  # Standard air pressure [Pa]
     gamma = 1.4  # Heat capacity ratio of air
     nu = 1.95e-5  # [Pa.s] Dynamic viscosity of air
-    rho0 = 1.204  # [kg/m^3] Density of air
-    c0 = 343  # Velocity of sound in air [m/s]
-    z0 = rho0 * c0  # Characteristic impedance of air
-    # d = 50e-3  # [m] Sample thickness 
-    
+    tK = temp + 273.15
+    c0 = 20.047 * np.sqrt( tK )     # m/s
+    rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
+    z0 = rho0 * c0  # Characteristic impedance of air       
+ 
     # Calculate density for the JCA model
     d_JCA = dens_JCA(phi, alpha_inf, sigma, lamb, nu, rho0, omega) 
     # Calculate bulk modulus for the JCA model
@@ -291,24 +290,21 @@ def test_jcal_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d):
 
     return abs_JCAL
 
-def test_horosh_model(f, phi, alpha_inf, sigma, r_por, d):
+
+
+def test_horosh_model(f, phi, alpha_inf, sigma, r_por, d, temp=20, p0=99000):
     """
     Absorption equation based on the Horoshenkov & Swift (HS) model.
     """
     omega = 2 * np.pi * f  # Angular frequency
-    #phi, alpha_inf, sigma, r_por = params
-    # phi = x[0]  # Porosity
-    # alpha_inf = x[1]  # Infinite frequency absorption coefficient
-    # sigma = x[2]  # Flow resistance
-    # r_por = x[3]  # Pore radius
-    
+
     Np = 0.71  # Prandtl number for air
-    p0 = 101325  # Standard air pressure [Pa]
     gamma = 1.4  # Heat capacity ratio of air 
-    rho0 = 1.204  # [kg/m^3] Density of air
-    c0 = 343  # Velocity of sound in air [m/s]
-    z0 = rho0 * c0  # Characteristic impedance of air
-    #d = 40e-3  # [m] Sample thickness 
+    
+    tK = temp + 273.15
+    c0 = 20.047 * np.sqrt( tK )     # m/s
+    rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
+    z0 = rho0 * c0  # Characteristic impedance of air       
 
     xi = (r_por * np.log(2)) ** 2  # Parameter for absorption calculations
     ep = np.sqrt(1j * omega * rho0 * alpha_inf / (sigma * phi))  # Normalize absorption
@@ -337,6 +333,47 @@ def test_horosh_model(f, phi, alpha_inf, sigma, r_por, d):
     
     return abs_HS
 
+def test_wilson_stinson_model(f, phi, alpha_inf, d, l=2e-3, temp=20, p0=99000):
+    """
+    Absorption equation based on the Wilson & Stinson model.
+    """
+    omega = 2 * np.pi * f  # Angular frequency
+
+    tK = temp + 273.15
+    c0 = 20.047 * np.sqrt( tK )     # m/s
+    rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
+    z0 = rho0 * c0  # Characteristic impedance of air       
+    gamma = 1.4  # Adiabatic constant
+    # l = 2e-3 # some dimension characteristic of the pore (Wilson) --> grain size (eg. 2 mm) [m]
+    nu = 1.95e-5  # [Pa.s] Dynamic viscosity of air
+    Np = 0.71 #Prandtl number
+    
+    
+    rho_inf = (rho0 * alpha_inf**2) / phi
+    k_inf =  (p0 * gamma)/phi
+    tau_vor = (rho0 * l**2) / (2*nu) # Relaxation time
+    tau_ent =  tau_vor * Np # Relaxation time
+    
+    # Effective density
+    d_WS = rho_inf * (np.sqrt(1 - 1j*omega*tau_vor) / (np.sqrt(1 - 1j*omega*tau_vor) - 1))
+
+    # Effective bulk modulus
+    b_WS = k_inf * (np.sqrt(1 - 1j*omega*tau_ent) / (np.sqrt(1 - 1j*omega*tau_ent) + gamma - 1))
+
+    # Characteristic impedance
+    Zc_WS = np.sqrt(d_WS * b_WS)
+
+    # Wavenumber
+    k_WS = omega * np.sqrt(d_WS / b_WS)
+
+    # Surface acoustic impedance
+    z_WS = -1j * Zc_WS * (1 / np.tan(k_WS * d))
+
+    # Absorption coefficient
+    abs_WS = 1 - np.abs((z_WS - z0) / (z_WS + z0))**2
+
+    return abs_WS
+
 # def nlcon(x):
 #     """
 #     Non-linear constraint function for the JCA model.
@@ -363,9 +400,9 @@ def NonlinLS_inv(xdata, ydata, startpt, lb, ub, model, d):
         def wrapper(f, *params):
             return test_jca_model(f, *params, d)
         #print(lb)
-        lb_jca = lb[:-1]  # Lower bound of parameters
-        ub_jca = ub[:-1]  # Upper bound of parameters
-        startpt_jca = startpt[:-1]
+        lb_jca = lb[:5]  # Lower bound of parameters
+        ub_jca = ub[:5]  # Upper bound of parameters
+        startpt_jca = startpt[:5]
         coef_JCA, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_jca, bounds=(lb_jca, ub_jca))
         fitted_data, dens, bulk = jca_model(xdata, *coef_JCA, d)
         return fitted_data, dens, bulk, coef_JCA, cov
@@ -374,9 +411,9 @@ def NonlinLS_inv(xdata, ydata, startpt, lb, ub, model, d):
         def wrapper(f, *params):
             return test_horosh_model(f, *params, d)
         
-        lb_hs = lb[:-3] + lb[-1:]  # Lower bound of parameters
-        ub_hs = ub[:-3] + ub[-1:]  # Upper bound of parameters
-        startpt_hs = startpt[:-3] + startpt[-1:]
+        lb_hs = lb[:3] + lb[-1:]  # Lower bound of parameters
+        ub_hs = ub[:3] + ub[-1:]  # Upper bound of parameters
+        startpt_hs = startpt[:3] + startpt[-1:]
         coef_HS, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_hs, bounds=(lb_hs, ub_hs))
         fitted_data, dens, bulk = horosh_model(xdata, *coef_HS, d)
         return fitted_data, dens, bulk, coef_HS, cov
@@ -385,13 +422,23 @@ def NonlinLS_inv(xdata, ydata, startpt, lb, ub, model, d):
         def wrapper(f, *params):
             return test_jcal_model(f, *params, d)
         
-        lb_hs = lb[:-3] + lb[-1:]  # Lower bound of parameters
-        ub_hs = ub[:-3] + ub[-1:]  # Upper bound of parameters
-        startpt_hs = startpt[:-3] + startpt[-1:]
-        coef_HS, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_hs, bounds=(lb_hs, ub_hs))
+        lb_hs = lb[:-6]  # Lower bound of parameters
+        ub_hs = ub[:-6]  # Upper bound of parameters
+        startpt_hs = startpt[:6] 
+        coef_, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_hs, bounds=(lb_hs, ub_hs))
         fitted_data, dens, bulk = jcal_model(xdata, *coef_HS, d)
-        return fitted_data, dens, bulk, coef_HS, cov
-
+        return fitted_data, dens, bulk, coef_, cov
+    
+    elif model == 'WS':
+        def wrapper(f, *params):
+            return test_wilson_stinson_model(f, *params, d)
+        
+        lb_ws = lb[:2] + lb[-2:-1]  # Lower bound of parameters
+        ub_ws = ub[:2] + ub[-2:-1]  # Upper bound of parameters
+        startpt_ws = startpt[:2] + startpt[-2:-1]
+        coef_WS, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_ws, bounds=(lb_ws, ub_ws))
+        fitted_data, dens, bulk = wilson_stinson_model(xdata, *coef_WS, d)
+        return fitted_data, dens, bulk, coef_WS, cov
 
 
 #%% GENETIC ALGORITHM METHOD
