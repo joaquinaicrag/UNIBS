@@ -88,6 +88,59 @@ def jcal_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000)
 
     return abs_JCAL, d_JCAL, b_JCAL
 
+def jcapl_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000):
+    """
+    Absorption equation based on the JCAL model.
+    """
+    omega = 2 * np.pi * f  # Angular frequency
+   
+    Np = 0.71  # Prandtl number for air
+    #p0 = 101325  # Standard air pressure [Pa]
+    gamma = 1.4  # Heat capacity ratio of air
+    nu = 1.95e-5  # [Pa.s] Dynamic viscosity of air
+    cp = 1005  # Specific heat capacity of air [J/(kg*K)]
+
+    
+    tK = temp + 273.15
+    c0 = 20.047 * np.sqrt( tK )     # m/s
+    rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
+    z0 = rho0 * c0  # Characteristic impedance of air         
+    
+    alpha_zero_prima = # Static thermal tortuosity
+    k_zero_prima = # Static thermal permeability
+    kappa = 0.2 # Static thermal conductivity
+
+    alpha_cup = 1111
+    F_cup =1111
+    omega_line = 111
+    m = 111
+    p = 111
+
+    B_cup = 111
+    F_cup_prima = 111
+    omega_line_prima = omega * rho0 * cp / (phi * kappa)
+    m_prima = (8*k_zero_prima) / (phi*lamb_prima**2)  
+    p_prima = m_prima / 4*(alpha_zero_prima - 1)
+
+    # Calculate density for the JCAPL model
+    d_JCAL = (rho0 * alpha_cup) / phi
+    # Calculate bulk modulus for the JCAPL model
+    b_JCAL = (gamma * p0 / phi) * (B_cup)
+    # Characteristic impedance
+    Zc_JCAL = np.sqrt(d_JCAL * b_JCAL)   
+    # Wavenumber 
+    k_JCAL = omega * np.sqrt(d_JCAL / b_JCAL)
+    # Surface acoustic impedance of the porous layer 
+    z_JCAL = -1j * Zc_JCAL * (1/np.tan(k_JCAL * d))
+    # Calculate the final absorption response 
+    abs_JCAL = 1 - np.abs((z_JCAL - z0) / (z_JCAL + z0))**2
+
+    return abs_JCAL, d_JCAL, b_JCAL    
+
+
+
+
+
 def horosh_model(f, phi, alpha_inf, sigma, r_por, d, temp=20, p0=99000):
     """
     Absorption equation based on the Horoshenkov & Swift (HS) model.
@@ -165,7 +218,7 @@ def attenborough_swift_model(f, phi, alpha_inf, sigma, lamb, d, temp=20, p0=9900
 
 #Wilson & Stinson model:
 #Absorption equation based on the Wilson & Stinson model.
-def wilson_stinson_model(f, phi, alpha_inf, d, temp=20, p0=99000):
+def wilson_stinson_model(f, phi, alpha_inf, sigma, d, temp=20, p0=99000):
     """
     Absorption equation based on the Wilson & Stinson model.
     """
@@ -176,21 +229,23 @@ def wilson_stinson_model(f, phi, alpha_inf, d, temp=20, p0=99000):
     rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
     z0 = rho0 * c0  # Characteristic impedance of air       
     gamma = 1.4  # Adiabatic constant
-    l = 2e-3 # some dimension characteristic of the pore (Wilson) --> grain size (eg. 2 mm) [m]
+    #l = 2e-3 # some dimension characteristic of the pore (Wilson) --> grain size (eg. 2 mm) [m]
     nu = 1.95e-5  # [Pa.s] Dynamic viscosity of air
     Np = 0.71 #Prandtl number
     
     
-    rho_inf = (rho0 * alpha_inf**2) / phi
+    #rho_inf = (rho0 * alpha_inf**2) / phi
+    rho_inf = (rho0 * alpha_inf) / phi #from Luc page
     k_inf =  (p0 * gamma)/phi
-    tau_vor = (rho0 * l**2) / (2*nu) # Relaxation time
+    #tau_vor = 2*rho0*(alpha_inf**2) / (phi * sigma) # Relaxation time 
+    tau_vor = 2*rho0*(alpha_inf) / (phi * sigma) # Relaxation time From Luc page
     tau_ent =  tau_vor * Np # Relaxation time
     
     # Effective density
-    d_WS = rho_inf * (np.sqrt(1 - 1j*omega*tau_vor) / (np.sqrt(1 - 1j*omega*tau_vor) - 1))
+    d_WS =  rho_inf * (np.sqrt(1 + 1j*omega*tau_vor) / (np.sqrt(1 + 1j*omega*tau_vor) - 1))
 
     # Effective bulk modulus
-    b_WS = k_inf * (np.sqrt(1 - 1j*omega*tau_ent) / (np.sqrt(1 - 1j*omega*tau_ent) + gamma - 1))
+    b_WS =  k_inf * (np.sqrt(1 + 1j*omega*tau_ent) / (np.sqrt(1 + 1j*omega*tau_ent) + gamma - 1))  #phi * k_inf * (np.sqrt(1 - 1j*omega*tau_ent) / (np.sqrt(1 - 1j*omega*tau_ent) + gamma - 1))
 
     # Characteristic impedance
     Zc_WS = np.sqrt(d_WS * b_WS)
@@ -202,7 +257,12 @@ def wilson_stinson_model(f, phi, alpha_inf, d, temp=20, p0=99000):
     z_WS = -1j * Zc_WS * (1 / np.tan(k_WS * d))
 
     # Absorption coefficient
-    abs_WS = 1 - np.abs((z_WS - z0) / (z_WS + z0))**2
+    #abs_WS = 1 - np.abs((z_WS - z0) / (z_WS + z0))**2
+
+    # Normalized surface impedance
+    ep = z_WS / z0  
+    # Calculate the final absorption response
+    abs_WS = 4 * np.real(ep) / (np.abs(ep)**2 + 2 * np.real(ep) + 1)
 
     return abs_WS, d_WS, b_WS
 
@@ -333,7 +393,7 @@ def test_horosh_model(f, phi, alpha_inf, sigma, r_por, d, temp=20, p0=99000):
     
     return abs_HS
 
-def test_wilson_stinson_model(f, phi, alpha_inf, d, l=2e-3, temp=20, p0=99000):
+def test_wilson_stinson_model(f, phi, alpha_inf, sigma, d, temp=20, p0=99000):
     """
     Absorption equation based on the Wilson & Stinson model.
     """
@@ -351,14 +411,15 @@ def test_wilson_stinson_model(f, phi, alpha_inf, d, l=2e-3, temp=20, p0=99000):
     
     rho_inf = (rho0 * alpha_inf**2) / phi
     k_inf =  (p0 * gamma)/phi
-    tau_vor = (rho0 * l**2) / (2*nu) # Relaxation time
+    #tau_vor = (rho0 * l**2) / (2*nu) # Relaxation time
+    tau_vor = 2*rho0*(alpha_inf**2) / (phi * sigma) # Relaxation time 
     tau_ent =  tau_vor * Np # Relaxation time
     
     # Effective density
-    d_WS = rho_inf * (np.sqrt(1 - 1j*omega*tau_vor) / (np.sqrt(1 - 1j*omega*tau_vor) - 1))
+    d_WS = rho_inf * (np.sqrt(1 + 1j*omega*tau_vor) / (np.sqrt(1 + 1j*omega*tau_vor) - 1))
 
     # Effective bulk modulus
-    b_WS = k_inf * (np.sqrt(1 - 1j*omega*tau_ent) / (np.sqrt(1 - 1j*omega*tau_ent) + gamma - 1))
+    b_WS = k_inf * (np.sqrt(1 + 1j*omega*tau_ent) / (np.sqrt(1 + 1j*omega*tau_ent) + gamma - 1))
 
     # Characteristic impedance
     Zc_WS = np.sqrt(d_WS * b_WS)
@@ -433,9 +494,9 @@ def NonlinLS_inv(xdata, ydata, startpt, lb, ub, model, d):
         def wrapper(f, *params):
             return test_wilson_stinson_model(f, *params, d)
         
-        lb_ws = lb[:2] + lb[-2:-1]  # Lower bound of parameters
-        ub_ws = ub[:2] + ub[-2:-1]  # Upper bound of parameters
-        startpt_ws = startpt[:2] + startpt[-2:-1]
+        lb_ws = lb[:3]   # Lower bound of parameters
+        ub_ws = ub[:3]   # Upper bound of parameters
+        startpt_ws = startpt[:3] 
         coef_WS, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_ws, bounds=(lb_ws, ub_ws))
         fitted_data, dens, bulk = wilson_stinson_model(xdata, *coef_WS, d)
         return fitted_data, dens, bulk, coef_WS, cov
