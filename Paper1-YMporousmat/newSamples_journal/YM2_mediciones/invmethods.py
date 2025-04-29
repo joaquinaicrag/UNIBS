@@ -97,7 +97,7 @@ def jcapl_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000
     Np = 0.71  # Prandtl number for air
     #p0 = 101325  # Standard air pressure [Pa]
     gamma = 1.4  # Heat capacity ratio of air
-    nu = 1.95e-5  # [Pa.s] Dynamic viscosity of air
+    eta = 1.95e-5  # [Pa.s] Dynamic viscosity of air
     cp = 1005  # Specific heat capacity of air [J/(kg*K)]
 
     
@@ -106,36 +106,41 @@ def jcapl_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000
     rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
     z0 = rho0 * c0  # Characteristic impedance of air         
     
-    alpha_zero_prima = # Static thermal tortuosity
-    k_zero_prima = # Static thermal permeability
-    kappa = 0.2 # Static thermal conductivity
+    alpha_zero = 111# Static viscous tortuosity (it was shown by Lafarge(2006) that alpha_zero >= alpha_inf)
+    alpha_zero_prima = 111# Static thermal tortuosity
+    k_zero = eta/sigma # Static viscous permeability air (m^2) 
+    k_zero_prima = 111# Static thermal permeability air (m^2)
+    kappa = 0.0257 # Static thermal conductivity air (W/(m*K))
 
-    alpha_cup = 1111
-    F_cup =1111
-    omega_line = 111
-    m = 111
-    p = 111
-
-    B_cup = 111
-    F_cup_prima = 111
-    omega_line_prima = omega * rho0 * cp / (phi * kappa)
+    
+    omega_line = omega * rho0 * k_zero * alpha_inf / (phi * eta)
+    m = 8*k_zero*alpha_inf / (phi*lamb**2)
+    p = m / 4*(alpha_zero/alpha_inf - 1)
+    F_cup = 1 - p + p*np.sqrt(1 + (m/2*(p**2)) * 1j*omega_line)
+    alpha_cup = alpha_inf * [1 + (1j*omega_line)**(-1) * F_cup]
+    
+    
+    
+    omega_line_prima = (omega * rho0 * cp * k_zero_prima) / (phi * kappa)
     m_prima = (8*k_zero_prima) / (phi*lamb_prima**2)  
     p_prima = m_prima / 4*(alpha_zero_prima - 1)
+    F_cup_prima = 1 - p_prima + p_prima*np.sqrt(1 + (m_prima/2*(p_prima**2)) * 1j*omega_line_prima)
+    B_cup = gamma - (gamma - 1) * [1 + (1j*omega_line_prima)**(-1) * F_cup_prima]**(-1)
 
     # Calculate density for the JCAPL model
-    d_JCAL = (rho0 * alpha_cup) / phi
+    d_JCAPL = (rho0 * alpha_cup) / phi
     # Calculate bulk modulus for the JCAPL model
-    b_JCAL = (gamma * p0 / phi) * (B_cup)
+    b_JCAPL = (gamma * p0 / phi) * (B_cup)
     # Characteristic impedance
-    Zc_JCAL = np.sqrt(d_JCAL * b_JCAL)   
+    Zc_JCAPL = np.sqrt(d_JCAPL * b_JCAPL)   
     # Wavenumber 
-    k_JCAL = omega * np.sqrt(d_JCAL / b_JCAL)
+    k_JCAPL = omega * np.sqrt(d_JCAPL / b_JCAPL)
     # Surface acoustic impedance of the porous layer 
-    z_JCAL = -1j * Zc_JCAL * (1/np.tan(k_JCAL * d))
+    z_JCAPL = -1j * Zc_JCAPL * (1/np.tan(k_JCAPL * d))
     # Calculate the final absorption response 
-    abs_JCAL = 1 - np.abs((z_JCAL - z0) / (z_JCAL + z0))**2
+    abs_JCAPL = 1 - np.abs((z_JCAPL - z0) / (z_JCAPL + z0))**2
 
-    return abs_JCAL, d_JCAL, b_JCAL    
+    return abs_JCAPL, d_JCAPL, b_JCAPL    
 
 
 
