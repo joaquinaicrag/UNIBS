@@ -57,7 +57,7 @@ def jca_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000):
 
 
 
-def jcal_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000):
+def jcal_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, k0_prima, d, temp=20, p0=99000):
     """
     Absorption equation based on the JCAL model.
     """
@@ -76,7 +76,7 @@ def jcal_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000)
     # Calculate density for the JCA model
     d_JCAL = dens_JCA(phi, alpha_inf, sigma, lamb, nu, rho0, omega) 
     # Calculate bulk modulus for the JCA model
-    b_JCAL = bulk_JCAL(phi, lamb_prima, p0, Np, gamma, sigma, nu, rho0, omega)
+    b_JCAL = bulk_JCAL(phi, lamb_prima, p0, Np, gamma, sigma, nu, k0_prima, rho0, omega)
     # Characteristic impedance
     Zc_JCAL = np.sqrt(d_JCAL * b_JCAL)   
     # Wavenumber for JCAL model
@@ -87,6 +87,8 @@ def jcal_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000)
     abs_JCAL = 1 - np.abs((z_JCAL - z0) / (z_JCAL + z0))**2
 
     return abs_JCAL, d_JCAL, b_JCAL
+
+
 
 def jcapl_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000):
     """
@@ -277,7 +279,7 @@ def wilson_stinson_model(f, phi, alpha_inf, sigma, d, temp=20, p0=99000):
 #%%
 
 # ANALYTICAL MODELS ADAPTED FOR THE INVERSE METHOD IMPLEMENTATION
-
+'''  
 def test_jca_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000): 
     """
     Absorption equation based on the JCA model.
@@ -456,7 +458,7 @@ def test_wilson_stinson_model(f, phi, alpha_inf, sigma, d, temp=20, p0=99000):
 #     c2 = []  # Inequality constraints (if any)
 #     return c2, ceq2
 
-
+'''
 
 
 # NON LINEAR LEAST SQUARE METHOD
@@ -464,44 +466,49 @@ def test_wilson_stinson_model(f, phi, alpha_inf, sigma, d, temp=20, p0=99000):
 def NonlinLS_inv(xdata, ydata, startpt, lb, ub, model, d):
     if model == 'JCA':
         def wrapper(f, *params):
-            return test_jca_model(f, *params, d)
+            abs_jca, d_jca, b_jca = jca_model(f, *params, d)
+            return abs_jca
         #print(lb)
-        lb_jca = lb[:5]  # Lower bound of parameters
-        ub_jca = ub[:5]  # Upper bound of parameters
-        startpt_jca = startpt[:5]
+    
+        lb_jca = list(lb['phi'], lb['alpha_inf'], lb['sigma'], lb['lamb'], lb['lamb_prima'])  # Lower bound of parameters
+        ub_jca = list(ub['phi'], ub['alpha_inf'], ub['sigma'], ub['lamb'], ub['lamb_prima'])  # Upper bound of parameters
+        startpt_jca = list(startpt['phi'], startpt['alpha_inf'], startpt['sigma'], startpt['lamb'], startpt['lamb_prima'])
         coef_JCA, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_jca, bounds=(lb_jca, ub_jca))
         fitted_data, dens, bulk = jca_model(xdata, *coef_JCA, d)
         return fitted_data, dens, bulk, coef_JCA, cov
     
     elif model == 'HS':
         def wrapper(f, *params):
-            return test_horosh_model(f, *params, d)
+            abs_hs, d_hs, b_hs = horosh_model(f, *params, d)
+            return abs_hs
         
-        lb_hs = lb[:3] + lb[-1:]  # Lower bound of parameters
-        ub_hs = ub[:3] + ub[-1:]  # Upper bound of parameters
-        startpt_hs = startpt[:3] + startpt[-1:]
+        lb_hs = list(lb['phi'], lb['alpha_inf'], lb['sigma'], lb['dev_por'])  # Lower bound of parameters
+        ub_hs = list(ub['phi'], ub['alpha_inf'], ub['sigma'], ub['dev_por'])  # Upper bound of parameters
+        startpt_hs = list(startpt['phi'], startpt['alpha_inf'], startpt['sigma'], startpt['dev_por'])
         coef_HS, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_hs, bounds=(lb_hs, ub_hs))
         fitted_data, dens, bulk = horosh_model(xdata, *coef_HS, d)
         return fitted_data, dens, bulk, coef_HS, cov
     
     elif model == 'JCAL':
         def wrapper(f, *params):
-            return test_jcal_model(f, *params, d)
+            abs_jcal, d_jcal, b_jcal = jca_model(f, *params, d)
+            return abs_jcal
         
-        lb_hs = lb[:-6]  # Lower bound of parameters
-        ub_hs = ub[:-6]  # Upper bound of parameters
-        startpt_hs = startpt[:6] 
-        coef_, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_hs, bounds=(lb_hs, ub_hs))
+        lb_jcal = list(lb['phi'], lb['alpha_inf'], lb['sigma'], lb['lamb'], lb['lamb_prima'], lb['k0_prima'])  # Lower bound of parameters
+        ub_jcal = list(ub['phi'], ub['alpha_inf'], ub['sigma'], ub['lamb'], ub['lamb_prima'], ub['k0_prima'])  # Upper bound of parameters
+        startpt_jcal = list(startpt['phi'], startpt['alpha_inf'], startpt['sigma'], startpt['lamb'], startpt['lamb_prima'], startpt['k0_prima'])
+        coef_, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_jcal, bounds=(lb_jcal, ub_jcal))
         fitted_data, dens, bulk = jcal_model(xdata, *coef_HS, d)
         return fitted_data, dens, bulk, coef_, cov
     
     elif model == 'WS':
         def wrapper(f, *params):
-            return test_wilson_stinson_model(f, *params, d)
+            abs_ws, d_ws, b_ws = wilson_stinson_model(f, *params, d)
+            return abs_ws
         
-        lb_ws = lb[:3]   # Lower bound of parameters
-        ub_ws = ub[:3]   # Upper bound of parameters
-        startpt_ws = startpt[:3] 
+        lb_ws = list(lb['phi'], lb['alpha_inf'], lb['sigma'])  # Lower bound of parameters
+        ub_ws = list(ub['phi'], ub['alpha_inf'], ub['sigma'])  # Upper bound of parameters
+        startpt_ws = list(startpt['phi'], startpt['alpha_inf'], startpt['sigma'])
         coef_WS, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_ws, bounds=(lb_ws, ub_ws))
         fitted_data, dens, bulk = wilson_stinson_model(xdata, *coef_WS, d)
         return fitted_data, dens, bulk, coef_WS, cov
