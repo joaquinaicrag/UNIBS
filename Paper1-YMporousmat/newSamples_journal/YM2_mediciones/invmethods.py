@@ -470,9 +470,9 @@ def NonlinLS_inv(xdata, ydata, startpt, lb, ub, model, d):
             return abs_jca
         #print(lb)
     
-        lb_jca = list(lb['phi'], lb['alpha_inf'], lb['sigma'], lb['lamb'], lb['lamb_prima'])  # Lower bound of parameters
-        ub_jca = list(ub['phi'], ub['alpha_inf'], ub['sigma'], ub['lamb'], ub['lamb_prima'])  # Upper bound of parameters
-        startpt_jca = list(startpt['phi'], startpt['alpha_inf'], startpt['sigma'], startpt['lamb'], startpt['lamb_prima'])
+        lb_jca = list([lb['phi'], lb['alpha_inf'], lb['sigma'], lb['lamb'], lb['lamb_prima']])  # Lower bound of parameters
+        ub_jca = list([ub['phi'], ub['alpha_inf'], ub['sigma'], ub['lamb'], ub['lamb_prima']])  # Upper bound of parameters
+        startpt_jca = list([startpt['phi'], startpt['alpha_inf'], startpt['sigma'], startpt['lamb'], startpt['lamb_prima']])
         coef_JCA, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_jca, bounds=(lb_jca, ub_jca))
         fitted_data, dens, bulk = jca_model(xdata, *coef_JCA, d)
         return fitted_data, dens, bulk, coef_JCA, cov
@@ -482,9 +482,9 @@ def NonlinLS_inv(xdata, ydata, startpt, lb, ub, model, d):
             abs_hs, d_hs, b_hs = horosh_model(f, *params, d)
             return abs_hs
         
-        lb_hs = list(lb['phi'], lb['alpha_inf'], lb['sigma'], lb['dev_por'])  # Lower bound of parameters
-        ub_hs = list(ub['phi'], ub['alpha_inf'], ub['sigma'], ub['dev_por'])  # Upper bound of parameters
-        startpt_hs = list(startpt['phi'], startpt['alpha_inf'], startpt['sigma'], startpt['dev_por'])
+        lb_hs = list([lb['phi'], lb['alpha_inf'], lb['sigma'], lb['dev_por']])  # Lower bound of parameters
+        ub_hs = list([ub['phi'], ub['alpha_inf'], ub['sigma'], ub['dev_por']])  # Upper bound of parameters
+        startpt_hs = list([startpt['phi'], startpt['alpha_inf'], startpt['sigma'], startpt['dev_por']])
         coef_HS, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_hs, bounds=(lb_hs, ub_hs))
         fitted_data, dens, bulk = horosh_model(xdata, *coef_HS, d)
         return fitted_data, dens, bulk, coef_HS, cov
@@ -494,21 +494,21 @@ def NonlinLS_inv(xdata, ydata, startpt, lb, ub, model, d):
             abs_jcal, d_jcal, b_jcal = jca_model(f, *params, d)
             return abs_jcal
         
-        lb_jcal = list(lb['phi'], lb['alpha_inf'], lb['sigma'], lb['lamb'], lb['lamb_prima'], lb['k0_prima'])  # Lower bound of parameters
-        ub_jcal = list(ub['phi'], ub['alpha_inf'], ub['sigma'], ub['lamb'], ub['lamb_prima'], ub['k0_prima'])  # Upper bound of parameters
-        startpt_jcal = list(startpt['phi'], startpt['alpha_inf'], startpt['sigma'], startpt['lamb'], startpt['lamb_prima'], startpt['k0_prima'])
-        coef_, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_jcal, bounds=(lb_jcal, ub_jcal))
-        fitted_data, dens, bulk = jcal_model(xdata, *coef_HS, d)
-        return fitted_data, dens, bulk, coef_, cov
+        lb_jcal = list([lb['phi'], lb['alpha_inf'], lb['sigma'], lb['lamb'], lb['lamb_prima'], lb['k0_prima']])  # Lower bound of parameters
+        ub_jcal = list([ub['phi'], ub['alpha_inf'], ub['sigma'], ub['lamb'], ub['lamb_prima'], ub['k0_prima']])  # Upper bound of parameters
+        startpt_jcal = list([startpt['phi'], startpt['alpha_inf'], startpt['sigma'], startpt['lamb'], startpt['lamb_prima'], startpt['k0_prima']])
+        coef_JCAL, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_jcal, bounds=(lb_jcal, ub_jcal))
+        fitted_data, dens, bulk = jcal_model(xdata, *coef_JCAL, d)
+        return fitted_data, dens, bulk, coef_JCAL, cov
     
     elif model == 'WS':
         def wrapper(f, *params):
             abs_ws, d_ws, b_ws = wilson_stinson_model(f, *params, d)
             return abs_ws
         
-        lb_ws = list(lb['phi'], lb['alpha_inf'], lb['sigma'])  # Lower bound of parameters
-        ub_ws = list(ub['phi'], ub['alpha_inf'], ub['sigma'])  # Upper bound of parameters
-        startpt_ws = list(startpt['phi'], startpt['alpha_inf'], startpt['sigma'])
+        lb_ws = list([lb['phi'], lb['alpha_inf'], lb['sigma']])  # Lower bound of parameters
+        ub_ws = list([ub['phi'], ub['alpha_inf'], ub['sigma']])  # Upper bound of parameters
+        startpt_ws = list([startpt['phi'], startpt['alpha_inf'], startpt['sigma']])
         coef_WS, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_ws, bounds=(lb_ws, ub_ws))
         fitted_data, dens, bulk = wilson_stinson_model(xdata, *coef_WS, d)
         return fitted_data, dens, bulk, coef_WS, cov

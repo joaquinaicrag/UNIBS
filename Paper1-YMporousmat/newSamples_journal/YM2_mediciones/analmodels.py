@@ -56,8 +56,8 @@ def bulk_JCA(phi, lamb_prima, P0, Np, gamma, nu, rho0, omega):
 
 def bulk_JCAL(phi, lamb_prima, P0, Np, gamma, sigma, nu, k0_prima, rho0, omega):
     #k0 = nu / sigma # static viscous perm. (not used here)
-    G1prima = phi * nu / (rho0 * omega * Np * k0)
-    G2prima = (4 * Np * rho0 * k0 ** 2 * omega) / (nu * phi ** 2 * lamb_prima ** 2)
+    G1prima = phi * nu / (rho0 * omega * Np * k0_prima)
+    G2prima = (4 * Np * rho0 * k0_prima ** 2 * omega) / (nu * phi ** 2 * lamb_prima ** 2)
     B_JCAL = (gamma * P0 / phi) / (gamma - 
                 (gamma - 1) * (1 + (G1prima / 1j) * 
                 np.sqrt(1 + (1j * G2prima))) ** -1)
