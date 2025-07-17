@@ -54,22 +54,29 @@ def bulk_JCA(phi, lamb_prima, P0, Np, gamma, nu, rho0, omega):
     
     return B_JCA
 
-def bulk_JCAL(phi, lamb_prima, P0, Np, gamma, sigma, nu, k0_prima, rho0, omega):
+def bulk_JCAL(phi, lamb_prima, P0, Np, gamma, nu, k0_prima, rho0, omega, temp=293):
     #k0 = nu / sigma # static viscous perm. (not used here)
-    G1prima = phi * nu / (rho0 * omega * Np * k0_prima)
-    G2prima = (4 * Np * rho0 * k0_prima ** 2 * omega) / (nu * phi ** 2 * lamb_prima ** 2)
-    B_JCAL = (gamma * P0 / phi) / (gamma - 
-                (gamma - 1) * (1 + (G1prima / 1j) * 
-                np.sqrt(1 + (1j * G2prima))) ** -1)
     
-    #[m2] static thermal permeability (k0')
-    temp=293
     Cp = 4168.8 * (
     0.249679
     - 7.55179e-5 * temp
     + 1.69194e-7 * temp**2
     - 6.46128e-11 * temp**3)
     kappa = 2.624e-02 * ( (temp / 300)**(3/2) * (300 + 245.4 * np.exp(-27.6 / 300)) / (temp + 245.4 * np.exp(-27.6 / temp)) )  #Thermal conductivity
+    
+    G1prima = phi * nu / (rho0 * omega * Np * k0_prima)
+    
+    G2prima = (4 * Np * rho0 * k0_prima ** 2 * omega) / (nu * phi ** 2 * lamb_prima ** 2)
+    
+    B_JCAL = (gamma * P0 / phi) / (gamma - 
+                (gamma - 1) * (1 + (G1prima / 1j) * 
+                np.sqrt(1 + (1j * G2prima))) ** -1)
+    
+    bulk_jcal = (gamma * P0 / phi) * (gamma - (gamma - 1) * (1 - 1j*((phi*kappa) / (k0_prima*Cp*rho0*omega)) * 
+                np.sqrt(1 + 1j*((4*(k0_prima**2)*Cp*rho0*omega) / (kappa*(lamb_prima**2)*(phi**2))) ))**(-1) )
+    
+    
+    #[m2] static thermal permeability (k0')
     
     # Compute the denominator term inside the sqrt
     sqrt_term = np.sqrt(1 + 1j * 4 * rho0 * omega * Cp * k0_prima**2 / (kappa * lamb_prima**2 * phi**2))
@@ -80,4 +87,4 @@ def bulk_JCAL(phi, lamb_prima, P0, Np, gamma, sigma, nu, k0_prima, rho0, omega):
     # Compute K_eq
     K_eq = (1 / phi) * gamma * P0 / denominator
     
-    return B_JCAL
+    return bulk_jcal

@@ -63,20 +63,22 @@ def jcal_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, k0_prima, d, temp=20,
     """
     omega = 2 * np.pi * f  # Angular frequency
    
-    Np = 0.71  # Prandtl number for air
+    Np = 0.71  # Prandtl number for air  (cp*mu/kappa)
     #p0 = 101325  # Standard air pressure [Pa]
     gamma = 1.4  # Heat capacity ratio of air
-    nu = 1.95e-5  # [Pa.s] Dynamic viscosity of air
+    mu = 1.95e-5  # [Pa.s] Dynamic viscosity of air
     
     tK = temp + 273.15
     c0 = 20.047 * np.sqrt( tK )     # m/s
     rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
-    z0 = rho0 * c0  # Characteristic impedance of air         
+    z0 = rho0 * c0  # Characteristic impedance of air 
+    # kappa = 0.026 # Thermal conductivity of air  (W/m.K)
+    # cp = 1005 # Specific heat for air    (J/kg.K)    
     
     # Calculate density for the JCA model
-    d_JCAL = dens_JCA(phi, alpha_inf, sigma, lamb, nu, rho0, omega) 
+    d_JCAL = dens_JCA(phi, alpha_inf, sigma, lamb, mu, rho0, omega) 
     # Calculate bulk modulus for the JCA model
-    b_JCAL = bulk_JCAL(phi, lamb_prima, p0, Np, gamma, sigma, nu, k0_prima, rho0, omega)
+    b_JCAL = bulk_JCAL(phi, lamb_prima, p0, Np, gamma, mu, k0_prima, rho0, omega)
     # Characteristic impedance
     Zc_JCAL = np.sqrt(d_JCAL * b_JCAL)   
     # Wavenumber for JCAL model
@@ -491,7 +493,7 @@ def NonlinLS_inv(xdata, ydata, startpt, lb, ub, model, d):
     
     elif model == 'JCAL':
         def wrapper(f, *params):
-            abs_jcal, d_jcal, b_jcal = jca_model(f, *params, d)
+            abs_jcal, d_jcal, b_jcal = jcal_model(f, *params, d)
             return abs_jcal
         
         lb_jcal = list([lb['phi'], lb['alpha_inf'], lb['sigma'], lb['lamb'], lb['lamb_prima'], lb['k0_prima']])  # Lower bound of parameters
