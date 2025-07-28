@@ -68,7 +68,7 @@ def bulk_JCAL(phi, lamb_prima, P0, Np, gamma, nu, k0_prima, rho0, omega, temp=29
     
     G2prima = (4 * Np * rho0 * k0_prima ** 2 * omega) / (nu * phi ** 2 * lamb_prima ** 2)
     
-    B_JCAL = (gamma * P0 / phi) / (gamma - 
+    b_jcal = (gamma * P0 / phi) / (gamma - 
                 (gamma - 1) * (1 + (G1prima / 1j) * 
                 np.sqrt(1 + (1j * G2prima))) ** -1)
     
@@ -87,4 +87,4 @@ def bulk_JCAL(phi, lamb_prima, P0, Np, gamma, nu, k0_prima, rho0, omega, temp=29
     # Compute K_eq
     K_eq = (1 / phi) * gamma * P0 / denominator
     
-    return bulk_jcal
+    return b_jcal

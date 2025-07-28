@@ -150,23 +150,127 @@ def jcapl_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000
 
 
 
-def horosh_model(f, phi, alpha_inf, sigma, r_por, d, temp=20, p0=99000):
+def horosh_model(f, phi, alpha_inf, s_por, std_dev, d, temp=20, p0=99000):
     """
     Absorption equation based on the Horoshenkov & Swift (HS) model.
     """
-    omega = 2 * np.pi * f  # Angular frequency
+    omega = 2 * np.pi * np.array(f)  # Angular frequency
     
-    Np = 0.71  # Prandtl number for air
+    # Np = 0.71  # Prandtl number for air
     #p0 = 101325  # Standard air pressure [Pa]
-    gamma = 1.4  # Heat capacity ratio of air 
 
     tK = temp + 273.15
-    c0 = 20.047 * np.sqrt( tK )     # m/s
-    rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
-    z0 = rho0 * c0  # Characteristic impedance of air       
+    #c0 = 20.047 * np.sqrt( tK )     # m/s
+    #rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
+    Rg = 287.031	 # Specific gas constant for dry air (J.kg-1.K-1)
+    # Specific heat at constant pressure (J.kg-1.K-1; 260 K < T < 600 K
+    Cp = 4168.8*(0.249679 - 7.55179e-5*tK + 1.69194e-7*tK**2 - 6.46128e-11*tK**3)  
+    # Specific heat at constant volume (J.kg-1.K-1; 260 K < T < 600 K
+    Cv = Cp - Rg		
+    # Dynamic viscosity (N.s.m-2; 100 K < T < 600 K
+    eta   = 7.72488e-8*tK - 5.95238e-11*tK**2 + 2.71368e-14*tK**3 
+    # Ratio of specific heats
+    gam = Cp/Cv
+    # Density of air (kg.m-3)
+    rho0 = p0/(Rg*tK)
+    # Velocity of sound (m.s^-1)
+    c0 = np.sqrt(gam*Rg*tK)
+    # Thermal conductivity  (W.m-1.K-1) - cf A. D. Pierce p 513
+    kappa = 2.624e-02 * ( (tK/300)**(3/2) * (300 + 245.4*np.exp(-27.6/300)) / (tK + 245.4*np.exp(-27.6/tK)) )
+    Np    = eta*Cp/kappa # Prandtl number for air
+    z0 = rho0 * c0  # Characteristic impedance of air 
+    # print(c0, rho0, z0, Np, eta, kappa, Cp, gam, p0, tK)
+    # ----------------------------------------------- from Gle.
+    dv = std_dev * np.log(2)  # Standard deviation of the pore size distribution
+    
+    theta1 = (4/3) * np.exp(4*(dv**2)) - 1 
+    thetha2 = (1/np.sqrt(2))*np.exp((3/2)*dv**2)
+    theta3 = theta1 / thetha2 
 
-    xi = (r_por * np.log(2)) ** 2  # Parameter for absorption calculations
-    ep = np.sqrt(1j * omega * rho0 * alpha_inf / (sigma * phi))  # Normalize absorption
+    # tita1 = (4 / 3) * np.exp(4 * xi) - 1  # Related to shear modulus
+    # tita2 = np.exp(3 * xi / 2) / np.sqrt(2)  # Another related term
+    # a1 = tita1 / tita2 
+    # a2 = tita1
+    # b1 = a1
+
+    sigma = ((8 * eta * alpha_inf) / (s_por**2 * phi)) * np.exp(6 * dv**2)
+    sigmaprime = ((8 * eta * alpha_inf) / (s_por**2 * phi)) * np.exp(-6 * dv**2)
+
+    print(sigma, sigmaprime)
+    
+    epsilon = np.sqrt(1j * omega * rho0 * alpha_inf / (sigma * phi)) 
+    epsilon_Np = np.sqrt(1j * Np * omega * rho0 * alpha_inf / (sigmaprime * phi)) 
+    
+    Fw = (1 + theta3*epsilon + theta1*epsilon**2) / (1 + theta3*epsilon)
+    Fnp_w = (1 + theta3*epsilon_Np + theta1*epsilon_Np**2) / (1 + theta3*epsilon_Np)
+
+    d_HS = (alpha_inf / phi) * (rho0 + ((sigma * phi) / 1j*omega*alpha_inf) * Fw)
+    # d_HS = (alpha_inf / phi) * (rho0 - ((1j * phi * sigma) / (omega * alpha_inf) * f))  
+    b_HS = (gam*p0/phi) * (gam - ((rho0 * (gam-1)) / (rho0 + ((sigma*phi)/ (1j*Np*omega*alpha_inf))) * Fnp_w))**(-1)
+    # c_HS = (phi / (gamma * p0)) * (gamma - (rho0 * (gamma - 1) /
+    #            (rho0 - 1j * sigma * phi / (omega * alpha_inf * Np) * f)))
+
+    Zc_HS = np.sqrt(d_HS * b_HS)   
+    k_HS = omega * np.sqrt(d_HS / b_HS)
+    z_HS = -1j * Zc_HS * (1/np.tan(k_HS * d))
+    abs_HS = 1 - np.abs((z_HS - z0) / (z_HS + z0))**2
+
+    # -----------------------------------------------
+
+    # alpha_inf = np.exp(4 * std_dev**2 * np.log(2)**2) 
+     
+    # lw = (std_dev*np.log(2))**2
+
+    # # Define \thetas and Pade coefficients for circular cylindrical pore:
+    # th1 = 1/3
+    # th2 = np.exp(-1/2*lw) / np.sqrt(1/2) 
+
+    # a1 = th1/th2
+    # a2 = th1
+    # b1 = a1
+
+    # # Calculate the parameter \lambda and predict \sigma from the pore size data:
+
+    # sigma = ((8*eta* alpha_inf) / (mean_psize**2 * phi)) * np.exp(6*lw) 
+    # sigmaprime = ((8*eta* alpha_inf) / (mean_psize**2 * phi)) * np.exp(-6*lw) 
+
+    # epsilonrho = np.sqrt(-1j * omega * rho0 * alpha_inf/(sigma*phi))
+    # Gf = (1 + a1 * epsilonrho + a2 * epsilonrho) / (1 + a1 * epsilonrho )
+
+    # # Repeat the above for the thermal term in the model:
+    # th2 = np.exp(3/2*lw)
+
+    # a1 = th1/th2
+    # a2 = th1
+    # b1 = a1
+    # epsilonc = np.sqrt(-1j * omega * rho0 * Np * alpha_inf /(sigmaprime*phi))
+    # Gfn = (1 + a1*epsilonc + a2*epsilonc)/(1 + a1*epsilonc)
+
+    # # Calculate the complex density and compressibility for air in the pores:
+    # # d_HS = (1 + 1j*sigma*phi/omega/q2/rho0*Gf)
+    # d_HS = (alpha_inf/phi) * (1 + epsilonrho**(-2) * Gf) 
+    # Rpn = (1 + epsilonc**(-2)*Gfn)
+    # c_HS = (phi/(gam * p0)) * (gam - (gam - 1)/Rpn)
+
+    # b_HS = 1/c_HS
+
+  
+    # # Calculate the admittance and wavenumber:
+    # Adm = np.sqrt(c_HS/d_HS)
+    # wnmb = np.sqrt(d_HS*c_HS)*omega
+
+    # # Calculate the impedances and reflection coefficient:
+    # impd = 1./Adm
+    # Zs = -1j * (impd/z0) * (1/np.tan(wnmb * d))
+    # rfl = (Zs - z0)/(Zs + z0)
+    # abs_HS = 1 - np.abs(rfl)**2
+    # d_HS = rho0*d_HS*q2/phi
+    # c_HS = phi*c_HS
+
+
+    # # Old calculus
+    xi = (std_dev * np.log(2)) ** 2  # Parameter for absorption calculations
+    ep = np.sqrt(1j * omega * rho0 * alpha_inf / (sigma * phi))  
     tita1 = (4 / 3) * np.exp(4 * xi) - 1  # Related to shear modulus
     tita2 = np.exp(3 * xi / 2) / np.sqrt(2)  # Another related term
     a1 = tita1 / tita2 
@@ -176,7 +280,7 @@ def horosh_model(f, phi, alpha_inf, sigma, r_por, d, temp=20, p0=99000):
     # Calculate the absorption response for HS model
     f = (1 + a1 * ep + a2 * ep**2) / (1 + b1 * ep) 
     # Compressibility (inverse of bulk modulus) for HS
-    c_HS = (phi / (gamma * p0)) * (gamma - (rho0 * (gamma - 1) /
+    c_HS = (phi / (gam * p0)) * (gam - (rho0 * (gam - 1) /
                (rho0 - 1j * sigma * phi / (omega * alpha_inf * Np) * f)))
     b_HS = 1/c_HS           
     # Density for HS model
@@ -304,9 +408,9 @@ def NonlinLS_inv(xdata, ydata, startpt, lb, ub, model, d):
             abs_hs, d_hs, b_hs = horosh_model(f, *params, d)
             return abs_hs
         
-        lb_hs = list([lb['phi'], lb['alpha_inf'], lb['sigma'], lb['dev_por']])  # Lower bound of parameters
-        ub_hs = list([ub['phi'], ub['alpha_inf'], ub['sigma'], ub['dev_por']])  # Upper bound of parameters
-        startpt_hs = list([startpt['phi'], startpt['alpha_inf'], startpt['sigma'], startpt['dev_por']])
+        lb_hs = list([lb['phi'], lb['alpha_inf'], lb['s_por'], lb['dev_por']])  # Lower bound of parameters
+        ub_hs = list([ub['phi'], ub['alpha_inf'], ub['s_por'], ub['dev_por']])  # Upper bound of parameters
+        startpt_hs = list([startpt['phi'], startpt['alpha_inf'], startpt['s_por'], startpt['dev_por']])
         coef_HS, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_hs, bounds=(lb_hs, ub_hs))
         fitted_data, dens, bulk = horosh_model(xdata, *coef_HS, d)
         return fitted_data, dens, bulk, coef_HS, cov
