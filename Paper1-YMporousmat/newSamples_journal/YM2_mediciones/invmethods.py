@@ -196,7 +196,7 @@ def horosh_model(f, phi, alpha_inf, s_por, std_dev, d, temp=20, p0=99000):
     sigma = ((8 * eta * alpha_inf) / (s_por**2 * phi)) * np.exp(6 * dv**2)
     sigmaprime = ((8 * eta * alpha_inf) / (s_por**2 * phi)) * np.exp(-6 * dv**2)
 
-    print(sigma, sigmaprime)
+    #print(sigma, sigmaprime)
     
     epsilon = np.sqrt(1j * omega * rho0 * alpha_inf / (sigma * phi)) 
     epsilon_Np = np.sqrt(1j * Np * omega * rho0 * alpha_inf / (sigmaprime * phi)) 
