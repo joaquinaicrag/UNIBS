@@ -4,6 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from analmodels import *
+from scipy.optimize import curve_fit, minimize, least_squares
+from scipy.optimize import differential_evolution, basinhopping, NonlinearConstraint
 
 
 
@@ -438,6 +440,121 @@ def NonlinLS_inv(xdata, ydata, startpt, lb, ub, model, d):
         coef_WS, cov = curve_fit(wrapper, xdata, ydata, p0=startpt_ws, bounds=(lb_ws, ub_ws))
         fitted_data, dens, bulk = wilson_stinson_model(xdata, *coef_WS, d)
         return fitted_data, dens, bulk, coef_WS, cov
+    
+    
+    
+def DiffEvol_inv(xdata, ydata, lb, ub, model, d):
+    freq=xdata
+    abs_meas=ydata
+    
+    if model == 'JCA':
+        def cost_function(params):
+            alpha_jca, d_jca, b_jca = jca_model(freq, *params, d)
+            return np.sum((abs_meas - alpha_jca) ** 2)
+
+        # Define the nonlinear constraint: x[3] < x[4]
+        def constraint_fun(x):
+            return x[4] - x[3]  # x[4] - x[3] >= 0 ensures x[3] < x[4]
+
+        lb_jca = list([lb['phi'], lb['alpha_inf'], lb['sigma'], lb['lamb'], lb['lamb_prima']])  # Lower bound of parameters
+        ub_jca = list([ub['phi'], ub['alpha_inf'], ub['sigma'], ub['lamb'], ub['lamb_prima']])  # Upper bound of parameters
+        
+        # Create the nonlinear constraint object
+        nl_cons = NonlinearConstraint(constraint_fun, 0, float('inf'))
+        bounds = (list(zip(lb_jca, ub_jca)))
+        
+        # Global search with DIFFERENTIAL EVOLUTION
+        popsize = 15 # Population size for differential evolution
+        result = differential_evolution(cost_function, bounds=bounds, maxiter=2000, popsize=popsize, mutation=1.2, tol=1e-6, constraints=(nl_cons,))
+        result_local = least_squares(cost_function, x0=result.x, bounds=(lb_jca, ub_jca), method = 'trf', tr_solver = 'exact', jac = '3-point')
+        coef_JCA = result_local.x
+        fitted_data, dens, bulk = jca_model(freq, *coef_JCA, d)
+        
+        return fitted_data, dens, bulk, coef_JCA
+    
+    
+    elif model == 'HS':
+        
+        def cost_function(params):
+            alpha_hs, d_hs, b_hs = horosh_model(freq, *params, d)
+            return np.sum((abs_meas - alpha_hs) ** 2)
+
+        # Define the nonlinear constraint: x[3] < x[4]
+        def constraint_fun(x):
+            return x[4] - x[3]  # x[4] - x[3] >= 0 ensures x[3] < x[4]
+
+        lb_hs = list([lb['phi'], lb['alpha_inf'], lb['s_por'], lb['dev_por']])  # Lower bound of parameters
+        ub_hs = list([ub['phi'], ub['alpha_inf'], ub['s_por'], ub['dev_por']])  # Upper bound of parameters
+        
+        # Create the nonlinear constraint object
+        nl_cons = NonlinearConstraint(constraint_fun, 0, float('inf'))
+        bounds = (list(zip(lb_hs, ub_hs)))
+        
+        # Global search with DIFFERENTIAL EVOLUTION
+        popsize = 15 # Population size for differential evolution
+        result = differential_evolution(cost_function, bounds=bounds, maxiter=2000, popsize=popsize, mutation=1.2, tol=1e-6)
+        result_local = least_squares(cost_function, x0=result.x, bounds=(lb_hs, ub_hs), method = 'trf', tr_solver = 'exact', jac = '3-point')
+        coef_HS = result_local.x
+        fitted_data, dens, bulk = horosh_model(freq, *coef_HS, d)
+        
+        return fitted_data, dens, bulk, coef_HS
+        
+    
+    elif model == 'JCAL':
+        
+        def cost_function(params):
+            alpha_jcal, d_jcal, b_jcal = jcal_model(freq, *params, d)
+            return np.sum((abs_meas - alpha_jcal) ** 2)
+
+        # Define the nonlinear constraint: x[3] < x[4]
+        def constraint_fun(x):
+            return x[4] - x[3]  # x[4] - x[3] >= 0 ensures x[3] < x[4]
+
+        lb_jcal = list([lb['phi'], lb['alpha_inf'], lb['sigma'], lb['lamb'], lb['lamb_prima'], lb['k0_prima']])  # Lower bound of parameters
+        ub_jcal = list([ub['phi'], ub['alpha_inf'], ub['sigma'], ub['lamb'], ub['lamb_prima'], ub['k0_prima']])  # Upper bound of parameters
+        
+        # Create the nonlinear constraint object
+        nl_cons = NonlinearConstraint(constraint_fun, 0, float('inf'))
+        bounds = (list(zip(lb_jcal, ub_jcal)))
+        
+        # Global search with DIFFERENTIAL EVOLUTION
+        popsize = 15 # Population size for differential evolution
+        result = differential_evolution(cost_function, bounds=bounds, maxiter=2000, popsize=popsize, mutation=1.2, tol=1e-6, constraints=(nl_cons,))
+        result_local = least_squares(cost_function, x0=result.x, bounds=(lb_jcal, ub_jcal), method = 'trf', tr_solver = 'exact', jac = '3-point')
+        coef_JCAL = result_local.x
+        fitted_data, dens, bulk = jcal_model(freq, *coef_JCAL, d)
+        
+        return fitted_data, dens, bulk, coef_JCAL
+        
+    
+    elif model == 'WS':
+        
+        def cost_function(params):
+            alpha_ws, d_ws, b_ws = wilson_stinson_model(freq, *params, d)
+            return np.sum((abs_meas - alpha_ws) ** 2)
+
+        # Define the nonlinear constraint: x[3] < x[4]
+        def constraint_fun(x): # Define for WilSon model
+            return x[4] - x[3]  # x[4] - x[3] >= 0 ensures x[3] < x[4]
+
+        lb_ws = list([lb['rho_inf'], lb['k_inf'], lb['tau_vor'], lb['tau_ent']])  # Lower bound of parameters
+        ub_ws = list([ub['rho_inf'], ub['k_inf'], ub['tau_vor'], ub['tau_ent']])  # Upper bound of parameters
+        # startpt_hs = list([startpt['phi'], startpt['alpha_inf'], startpt['s_por'], startpt['dev_por']])
+        
+        # Create the nonlinear constraint object
+        nl_cons = NonlinearConstraint(constraint_fun, 0, float('inf'))
+        bounds = (list(zip(lb_ws, ub_ws)))
+        
+        # Global search with DIFFERENTIAL EVOLUTION
+        popsize = 15 # Population size for differential evolution
+        result = differential_evolution(cost_function, bounds=bounds, maxiter=2000, popsize=popsize, mutation=1.2, tol=1e-6)
+        result_local = least_squares(cost_function, x0=result.x, bounds=(lb_ws, ub_ws), method = 'trf', tr_solver = 'exact', jac = '3-point')
+        coef_WS = result_local.x
+        fitted_data, dens, bulk = wilson_stinson_model(freq, *coef_WS, d)
+        
+        return fitted_data, dens, bulk, coef_WS
+        
+    
 
 
 #%% GENETIC ALGORITHM METHOD
