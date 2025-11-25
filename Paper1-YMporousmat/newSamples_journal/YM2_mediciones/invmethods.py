@@ -31,7 +31,8 @@ def jca_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000):
     tK = temp + 273.15
     c0 = 20.047 * np.sqrt( tK )     # m/s
     rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
-    z0 = rho0 * c0  # Characteristic impedance of air                 
+    z0 = rho0 * c0  # Characteristic impedance of air         
+    k0 = w/c0        
     
     # Calculate the complex wave number K (Bonfiglio et al.)
     b_jca = (gamma * p0 / phi) / (
@@ -45,17 +46,25 @@ def jca_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000):
         (4j * (alpha_inf**2) * nu * rho0 * w / ((sigma**2) * (lamb**2) * (phi**2))))
     
     # Wavenumber in the porous material
-    kc = w * np.sqrt(d_jca / b_jca)  
+    kc_JCA = w * np.sqrt(d_jca / b_jca)  
     # Characteristic impedance of the porous material
-    Zc = np.sqrt(d_jca * b_jca)  
+    Zc_JCA = np.sqrt(d_jca * b_jca)  
     # Surface acoustic impedance of the porous layer
-    z = -1j * Zc * 1/np.tan(kc * d)
+    z = -1j * Zc_JCA * 1/np.tan(kc_JCA * d)
     # Normalized surface impedance
     ep = z / z0  
     # Calculate the final absorption response
     abs_jca = 4 * np.real(ep) / (np.abs(ep)**2 + 2 * np.real(ep) + 1)
+
+    # Calculate transmission loss:
+    T11 = np.cos(kc_JCA * d)
+    T12 = 1j*Zc_JCA * np.sin(kc_JCA * d)
+    T21= 1j * np.sin(kc_JCA * d) / (Zc_JCA)
+    T22 = T11
+
+    TL_JCA = 20*np.log10(abs((T11 + (T12/z0) + z0*T21 + T22) / (2*np.exp(1j*k0*d))))
     
-    return abs_jca, d_jca, b_jca
+    return abs_jca, d_jca, b_jca, TL_JCA
 
 
 
@@ -74,6 +83,7 @@ def jcal_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, k0_prima, d, temp=20,
     c0 = 20.047 * np.sqrt( tK )     # m/s
     rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
     z0 = rho0 * c0  # Characteristic impedance of air 
+    k0 = omega/c0
     # kappa = 0.026 # Thermal conductivity of air  (W/m.K)
     # cp = 1005 # Specific heat for air    (J/kg.K)    
     
@@ -90,7 +100,15 @@ def jcal_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, k0_prima, d, temp=20,
     # Calculate the final absorption response for JCAL
     abs_JCAL = 1 - np.abs((z_JCAL - z0) / (z_JCAL + z0))**2
 
-    return abs_JCAL, d_JCAL, b_JCAL
+        # Calculate transmission loss:
+    T11 = np.cos(k_JCAL * d)
+    T12 = 1j*Zc_JCAL * np.sin(k_JCAL * d)
+    T21= 1j * np.sin(k_JCAL * d) / (Zc_JCAL)
+    T22=T11
+
+    TL_JCAL = 20*np.log10(abs((T11 + (T12/z0) + z0*T21 + T22) / (2*np.exp(1j*k0*d))))
+
+    return abs_JCAL, d_JCAL, b_JCAL, TL_JCAL
 
 
 
@@ -110,7 +128,8 @@ def jcapl_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000
     tK = temp + 273.15
     c0 = 20.047 * np.sqrt( tK )     # m/s
     rho0 = 1.290 * (p0 / 101325) * (273.15 / tK)     # kg/m3
-    z0 = rho0 * c0  # Characteristic impedance of air         
+    z0 = rho0 * c0  # Characteristic impedance of air 
+    k0 = omega/c0        
     
     alpha_zero = 111# Static viscous tortuosity (it was shown by Lafarge(2006) that alpha_zero >= alpha_inf)
     alpha_zero_prima = 111# Static thermal tortuosity
@@ -146,7 +165,15 @@ def jcapl_model(f, phi, alpha_inf, sigma, lamb, lamb_prima, d, temp=20, p0=99000
     # Calculate the final absorption response 
     abs_JCAPL = 1 - np.abs((z_JCAPL - z0) / (z_JCAPL + z0))**2
 
-    return abs_JCAPL, d_JCAPL, b_JCAPL    
+    # Calculate transmission loss:
+    T11 = np.cos(k_JCAPL * d)
+    T12 = 1j*Zc_JCAPL * np.sin(k_JCAPL * d)
+    T21= 1j * np.sin(k_JCAPL * d) / (Zc_JCAPL)
+    T22=T11
+
+    TL_JCAPL = 20*np.log10(abs((T11 + (T12/z0) + z0*T21 + T22) / (2*np.exp(1j*k0*d))))
+
+    return abs_JCAPL, d_JCAPL, b_JCAPL, TL_JCAPL    
 
 
 
@@ -295,8 +322,17 @@ def horosh_model(f, phi, alpha_inf, s_por, std_dev, d, temp=20, p0=99000):
     z_HS = -1j * Zc_HS * (1/np.tan(k_HS * d))
     # Calculate the final absorption response for HS
     abs_HS = 1 - np.abs((z_HS - z0) / (z_HS + z0))**2
+
+    k0 = omega/c0
+    # Calculate transmission loss:
+    T11 = np.cos(k_HS * d)
+    T12 = 1j*Zc_HS * np.sin(k_HS * d)
+    T21= 1j * np.sin(k_HS * d) / (Zc_HS)
+    T22=T11
+
+    TL_HS = 20*np.log10(abs((T11 + (T12/z0) + z0*T21 + T22) / (2*np.exp(1j*k0*d))))
     
-    return abs_HS, d_HS, b_HS
+    return abs_HS, d_HS, b_HS, TL_HS
 
 #Attenborough & Swift model:
 def attenborough_swift_model(f, phi, alpha_inf, sigma, lamb, d, temp=20, p0=99000):
@@ -378,7 +414,16 @@ def wilson_stinson_model(f, rho_inf, k_inf, tau_vor, tau_ent, d, key=True, temp=
     # Calculate the final absorption response
     abs_WS = 4 * np.real(ep) / (np.abs(ep)**2 + 2 * np.real(ep) + 1)
 
-    return abs_WS, d_WS, b_WS
+    k0 = omega/c0
+    # Calculate transmission loss:
+    T11 = np.cos(k_WS * d)
+    T12 = 1j*Zc_WS * np.sin(k_WS * d)
+    T21= 1j * np.sin(k_WS * d) / (Zc_WS)
+    T22=T11
+
+    TL_WS = 20*np.log10(abs((T11 + (T12/z0) + z0*T21 + T22) / (2*np.exp(1j*k0*d))))
+
+    return abs_WS, d_WS, b_WS, TL_WS
 
 
 
@@ -449,7 +494,7 @@ def DiffEvol_inv(xdata, ydata, lb, ub, model, d):
     
     if model == 'JCA':
         def cost_function(params):
-            alpha_jca, d_jca, b_jca = jca_model(freq, *params, d)
+            alpha_jca, d_jca, b_jca, tl_jca = jca_model(freq, *params, d)
             return np.sum((abs_meas - alpha_jca) ** 2)
 
         # Define the nonlinear constraint: x[3] < x[4]
@@ -468,15 +513,15 @@ def DiffEvol_inv(xdata, ydata, lb, ub, model, d):
         result = differential_evolution(cost_function, bounds=bounds, maxiter=2000, popsize=popsize, mutation=1.2, tol=1e-6, constraints=(nl_cons,))
         result_local = least_squares(cost_function, x0=result.x, bounds=(lb_jca, ub_jca), method = 'trf', tr_solver = 'exact', jac = '3-point')
         coef_JCA = result_local.x
-        fitted_data, dens, bulk = jca_model(freq, *coef_JCA, d)
+        fitted_data, dens, bulk, TL_jca = jca_model(freq, *coef_JCA, d)
         
-        return fitted_data, dens, bulk, coef_JCA
+        return fitted_data, dens, bulk, coef_JCA, TL_jca
     
     
     elif model == 'HS':
         
         def cost_function(params):
-            alpha_hs, d_hs, b_hs = horosh_model(freq, *params, d)
+            alpha_hs, d_hs, b_hs, tl_hs = horosh_model(freq, *params, d)
             return np.sum((abs_meas - alpha_hs) ** 2)
 
         # Define the nonlinear constraint: x[3] < x[4]
@@ -495,15 +540,15 @@ def DiffEvol_inv(xdata, ydata, lb, ub, model, d):
         result = differential_evolution(cost_function, bounds=bounds, maxiter=2000, popsize=popsize, mutation=1.2, tol=1e-6)
         result_local = least_squares(cost_function, x0=result.x, bounds=(lb_hs, ub_hs), method = 'trf', tr_solver = 'exact', jac = '3-point')
         coef_HS = result_local.x
-        fitted_data, dens, bulk = horosh_model(freq, *coef_HS, d)
+        fitted_data, dens, bulk, tl_HS = horosh_model(freq, *coef_HS, d)
         
-        return fitted_data, dens, bulk, coef_HS
+        return fitted_data, dens, bulk, coef_HS, tl_HS
         
     
     elif model == 'JCAL':
         
         def cost_function(params):
-            alpha_jcal, d_jcal, b_jcal = jcal_model(freq, *params, d)
+            alpha_jcal, d_jcal, b_jcal, tl_jcal = jcal_model(freq, *params, d)
             return np.sum((abs_meas - alpha_jcal) ** 2)
 
         # Define the nonlinear constraint: x[3] < x[4]
@@ -522,15 +567,15 @@ def DiffEvol_inv(xdata, ydata, lb, ub, model, d):
         result = differential_evolution(cost_function, bounds=bounds, maxiter=2000, popsize=popsize, mutation=1.2, tol=1e-6, constraints=(nl_cons,))
         result_local = least_squares(cost_function, x0=result.x, bounds=(lb_jcal, ub_jcal), method = 'trf', tr_solver = 'exact', jac = '3-point')
         coef_JCAL = result_local.x
-        fitted_data, dens, bulk = jcal_model(freq, *coef_JCAL, d)
+        fitted_data, dens, bulk, tl_jcal = jcal_model(freq, *coef_JCAL, d)
         
-        return fitted_data, dens, bulk, coef_JCAL
+        return fitted_data, dens, bulk, coef_JCAL, tl_jcal
         
     
     elif model == 'WS':
         
         def cost_function(params):
-            alpha_ws, d_ws, b_ws = wilson_stinson_model(freq, *params, d)
+            alpha_ws, d_ws, b_ws, tl_ws = wilson_stinson_model(freq, *params, d)
             return np.sum((abs_meas - alpha_ws) ** 2)
 
         # Define the nonlinear constraint: x[3] < x[4]
@@ -550,9 +595,9 @@ def DiffEvol_inv(xdata, ydata, lb, ub, model, d):
         result = differential_evolution(cost_function, bounds=bounds, maxiter=2000, popsize=popsize, mutation=1.2, tol=1e-6)
         result_local = least_squares(cost_function, x0=result.x, bounds=(lb_ws, ub_ws), method = 'trf', tr_solver = 'exact', jac = '3-point')
         coef_WS = result_local.x
-        fitted_data, dens, bulk = wilson_stinson_model(freq, *coef_WS, d)
+        fitted_data, dens, bulk, tl_ws = wilson_stinson_model(freq, *coef_WS, d)
         
-        return fitted_data, dens, bulk, coef_WS
+        return fitted_data, dens, bulk, coef_WS, tl_ws
         
     
 
