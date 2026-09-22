@@ -1,0 +1,12 @@
+Layer Order,Material Name,Thickness [mm]
+Layer 1,Coarse-S1,3.69
+Layer 2,Fine-S1,13.60
+Layer 3,Fine-S2,18.11
+Layer 4,ExFine-S3,14.60
+
+Global Acoustic Metric,Value
+Total Thickness [mm],50.0
+Mean Alpha (100-4000 Hz),0.6910
+Raw NRC (Exact Average),0.5400
+Standardized NRC (ASTM C423),0.55
+Post-Resonance Ripple Std,0.0248
