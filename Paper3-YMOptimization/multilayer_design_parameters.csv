@@ -1,0 +1,5 @@
+Layer_Position,Layer_Name,Granulometry_ID,Compaction_State,Float_Thickness_mm,Integer_Thickness_mm,Porosity_phi,Flow_Resistivity_sigma_Nsm4,Tortuosity_alpha_inf,Viscous_Char_Length_Lambda_um,Thermal_Char_Length_Lambda_prime_um
+Layer 1 (Front),Coarse-S1,1,S1,3.00,3,0.39,7200,1.98,195.0,210.0
+Layer 2,Fine-S1,3,S1,14.75,15,0.5,26000,1.71,62.0,75.0
+Layer 3,Fine-S2,3,S2,17.35,17,0.46,33500,1.8,53.0,66.0
+Layer 4 (Back),ExFine-S3,4,S3,14.90,15,0.42,81000,2.9,22.0,28.0
